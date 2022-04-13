@@ -19,7 +19,7 @@ import torch.nn.init as init
 import global_func
 
 
-class OptHIST():
+class OptHIST(nn.Module):
     # further declaration
     x0: torch.tensor
     p_sharedInfo_back: torch.tensor
@@ -194,6 +194,125 @@ class OptHIST():
         Calculates only ONE day's prediction
         :return: prediction result for current day
         """
+        allInfo = self.p_sharedInfo_fore + self.h_sharedInfo_fore + self.individualInfo
+        pred_all = self.fc_out(allInfo).squeeze()
+
+        # assign to class
+        self.pred = pred_all
+        return pred_all
+
+    def forward(self,x,concept_matrix:torch.tensor,market_value:torch.tensor):
+        """
+        :param x: input raw data matrix S, which should be populated with Double
+        :return: GRU-extracted feature X0
+        """
+        '''encode_feature'''
+        encoded_feature = x.reshape(len(x), self.input_size, -1)  # [N, F, T]
+        encoded_feature = encoded_feature.permute(0, 2, 1)  # [N, T, F]
+        encoded_feature, _ = self.encoder(encoded_feature)
+
+        # assign to class
+        self.x0 = encoded_feature[:, -1, :]
+        x0 = encoded_feature[:, -1, :]
+        # return encoded_feature[:, -1, :]
+
+
+        """
+        Calculates only ONE day's predefined result
+        :param x0: encoded feature after GRU (num_stocks * hidden_size)
+        :param concept_matrix: matrix recording the concepts for each stock (num_stocks * 4635)
+        :param market_value: matrix recording the market value for each stock for (num_stocks)
+        :return: forecast output output_ps, backcast output sharedInfo_back
+        """
+        '''predefined_concept'''
+        # variables definition
+        device = torch.device("cpu")  # probably for potential GPU choice
+        (num_stocks, num_attributes) = concept_matrix.shape
+        # build the weight from each stock to the predefined concept
+        marketValue_matrix = market_value.reshape(num_stocks, 1).repeat(1, num_attributes)
+        stock2concept_matrix = concept_matrix * marketValue_matrix  # c in [4], market capitalization
+        stock2concept_sum = torch.sum(stock2concept_matrix, 0).reshape(1, -1).repeat(num_stocks, 1)
+        stock2concept_sum = concept_matrix * stock2concept_sum  # same as M1.mul(M2)
+        stock2concept_sum += torch.ones(num_stocks, num_attributes)  # make sum legal to be denominate
+        # weight from stock (alpha0)
+        stock2concept_origin = stock2concept_matrix / stock2concept_sum  # alpha0 in [4], representing the weight of size 10 * 4635
+        # initial representation (e0),
+        initial_rep = torch.t(stock2concept_origin).mm(x0)  # [5]
+        initial_rep = initial_rep[initial_rep.sum(1) != 0]  # [5] keep only relative concepts for saving computation
+        # weight from stock (alpha1)
+        cosSimilarity_initial = global_func.cal_cos_similarity(x0, initial_rep)  # [6] similarity
+        stock2concept_update = self.softmax_s2t(cosSimilarity_initial)  # [6] softmax normalization
+        # update representation (e1)
+        update_rep = self.fc_ps(torch.t(stock2concept_update).mm(x0))  # [7]
+        # weight from concept (beta)
+        cosSimilarity_update = global_func.cal_cos_similarity(x0, update_rep)  # [10] similarity
+        concept2stock = self.softmax_t2s(cosSimilarity_update)  # [10] softmax normalization
+        # shared information (s0)
+        sharedInfo = self.fc_ps(concept2stock.mm(update_rep))   # [11]
+        # outputs
+        sharedInfo_back = self.leaky_relu(self.fc_ps_back(sharedInfo))  # [12] x0_hat
+        sharedInfo_fore = self.leaky_relu(self.fc_ps_fore(sharedInfo))  # [12] y0
+        output_ps = self.fc_out_ps(sharedInfo_fore).squeeze()
+
+        # assign to class
+        self.p_sharedInfo_back = sharedInfo_back
+        self.p_sharedInfo_fore = sharedInfo_fore
+
+        """
+        Calculates only ONE day's hidden result
+        :param x1: encoded feature after excluding shared info (num_stocks * hidden_size)
+        :return: forecast output output_ps, backcast output sharedInfo_back
+        """
+        '''hidden_concept'''
+        x1 = x0 - self.p_sharedInfo_back
+        # variables definition
+        device = torch.device("cpu")  # probably for potential GPU choice
+        stock2concept = global_func.cal_cos_similarity(x1, x1)  ### ???????????????
+        dim = stock2concept.shape[0]
+        diag = stock2concept.diagonal(0)
+        stock2concept = stock2concept * (torch.ones(dim, dim) - torch.eye(dim)).to(device)
+        # for each row and column
+        row = torch.linspace(0, dim - 1, dim).reshape([-1, 1]).repeat(1, self.K).reshape(1, -1).long().to(device)
+        col = torch.topk(stock2concept, self.K, dim=1)[1].reshape(1, -1)
+        mask = torch.zeros([stock2concept.shape[0], stock2concept.shape[1]], device=stock2concept.device)
+        mask[row, col] = 1
+        stock2concept = stock2concept * mask
+        stock2concept += torch.diag_embed((stock2concept.sum(0) != 0).float() * diag)
+        # build hidden concept (u0)
+        hiddenConcept = torch.t(x1).mm(stock2concept).t()
+        hiddenConcept = hiddenConcept[hiddenConcept.sum(1) != 0]
+        # weight from concept (gamma)
+        cosSimilarity = global_func.cal_cos_similarity(x1, hiddenConcept)  # [10] similarity
+        concept2stock = self.softmax_t2s(cosSimilarity)  # [10] softmax normalization
+        # shared information (s1)
+        sharedInfo = self.fc_ps(concept2stock.mm(hiddenConcept))
+        # outputs
+        sharedInfo_back = self.leaky_relu(self.fc_hs_back(sharedInfo))  # [12] x1_hat
+        sharedInfo_fore = self.leaky_relu(self.fc_ps_fore(sharedInfo))  # [12] y1
+        output_hs = self.fc_out_ps(sharedInfo_fore).squeeze()
+
+        # assign to class
+        self.h_sharedInfo_back = sharedInfo_back
+        self.h_sharedInfo_fore = sharedInfo_fore
+
+        """
+        Calculates only ONE day's individual result
+        :param x2: encoded feature after excluding shared info (num_stocks * hidden_size)
+        :return: forecast output output_in
+        """
+        '''individual_concept'''
+        x2 = x1 - self.h_sharedInfo_back
+        individualInfo = self.leaky_relu(self.fc_individual(x2))  # [13]
+        output_individual = self.fc_out_individual(individualInfo).squeeze()
+
+        # assign to class
+        self.individualInfo = individualInfo
+
+        """
+        Calculates only ONE day's prediction
+        :return: prediction result for current day
+        """
+        '''predict'''
         allInfo = self.p_sharedInfo_fore + self.h_sharedInfo_fore + self.individualInfo
         pred_all = self.fc_out(allInfo).squeeze()
 
