@@ -99,7 +99,8 @@ def train_epoch(epoch, model, optimizer, train_loader, stock2concept_matrix = No
 
         feature = train_loader[idx.long()]
 
-        pred = model(feature, stock2concept_matrix[stock_index], marketValue[idx.long()])
+        # pred = model(feature, stock2concept_matrix[stock_index], marketValue[idx.long()])
+        pred = model(feature, stock2concept_matrix, marketValue[idx.long()])
         repeat_date_companies_label = torch.ones(r)*(random_date+1)*num_companies
         idx_label = stock_index + repeat_date_companies_label
         label = marketValue[idx_label.long()].squeeze()
@@ -144,7 +145,8 @@ def test_epoch(epoch, model, test_loader, stock2concept_matrix=None, marketValue
 
         feature = test_loader[idx.long()]
 
-        pred = model(feature, stock2concept_matrix[stock_index], marketValue[idx.long()])
+        # pred = model(feature, stock2concept_matrix[stock_index], marketValue[idx.long()])
+        pred = model(feature, stock2concept_matrix, marketValue[idx.long()])
         repeat_date_companies_label = torch.ones(r)*(random_date+1)*num_companies
         idx_label = stock_index + repeat_date_companies_label
         label = marketValue[idx_label.long()].squeeze()
@@ -205,6 +207,7 @@ def inference(model, data_loader, stock2concept_matrix=None, prefix='test'):
         feature = data_loader[idx.long()]
 
         pred = model(feature, stock2concept_matrix[stock_index], marketValue[idx.long()])
+        pred = model(feature, stock2concept_matrix, marketValue[idx.long()])
         repeat_date_companies_label = torch.ones(r)*(random_date+1)*num_companies
         idx_label = stock_index + repeat_date_companies_label
         label = marketValue[idx_label.long()].squeeze()
@@ -233,7 +236,7 @@ if __name__ == "__main__":
     stock2concept = torch.from_numpy(dataset.stock2concept).float()
 
     # parameters
-    (num_stocks, num_attributes) = dataset.stock2concept.shape
+    # (num_stocks, num_attributes) = dataset.stock2concept.shape
     dates = 1000
     valid_dates = 500
     test_dates = 500
@@ -350,8 +353,8 @@ if __name__ == "__main__":
             # pred.to_pickle(output_path+'/pred.pkl.'+name+str(times))
 
             precision, recall, ic, rank_ic = metric_fn(pred)
-            print("FLOAT?????????????????")
-            print(ic, rank_ic)
+            # print("FLOAT?????????????????")
+            # print(ic, rank_ic)
             # if len(ic) == 1:
             print(('%s: IC %.6f Rank IC %.6f')%(
                     name, ic, rank_ic))

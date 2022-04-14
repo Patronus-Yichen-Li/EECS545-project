@@ -225,31 +225,61 @@ class OptHIST(nn.Module):
         :return: forecast output output_ps, backcast output sharedInfo_back
         """
         '''predefined_concept'''
-        # variables definition
-        device = torch.device("cpu")  # probably for potential GPU choice
-        (num_stocks, num_attributes) = concept_matrix.shape
-        # build the weight from each stock to the predefined concept
-        marketValue_matrix = market_value.reshape(num_stocks, 1).repeat(1, num_attributes)
-        stock2concept_matrix = concept_matrix * marketValue_matrix  # c in [4], market capitalization
-        stock2concept_sum = torch.sum(stock2concept_matrix, 0).reshape(1, -1).repeat(num_stocks, 1)
-        stock2concept_sum = concept_matrix * stock2concept_sum  # same as M1.mul(M2)
-        stock2concept_sum += torch.ones(num_stocks, num_attributes)  # make sum legal to be denominate
-        # weight from stock (alpha0)
-        stock2concept_origin = stock2concept_matrix / stock2concept_sum  # alpha0 in [4], representing the weight of size 10 * 4635
-        # initial representation (e0),
-        initial_rep = torch.t(stock2concept_origin).mm(x0)  # [5]
-        initial_rep = initial_rep[initial_rep.sum(1) != 0]  # [5] keep only relative concepts for saving computation
-        # weight from stock (alpha1)
-        cosSimilarity_initial = global_func.cal_cos_similarity(x0, initial_rep)  # [6] similarity
-        stock2concept_update = self.softmax_s2t(cosSimilarity_initial)  # [6] softmax normalization
-        # update representation (e1)
-        update_rep = self.fc_ps(torch.t(stock2concept_update).mm(x0))  # [7]
-        # weight from concept (beta)
-        cosSimilarity_update = global_func.cal_cos_similarity(x0, update_rep)  # [10] similarity
-        concept2stock = self.softmax_t2s(cosSimilarity_update)  # [10] softmax normalization
+        # # variables definition
+        # device = torch.device("cpu")  # probably for potential GPU choice
+        # (num_stocks, num_attributes) = concept_matrix.shape
+        # # build the weight from each stock to the predefined concept
+        # marketValue_matrix = market_value.reshape(num_stocks, 1).repeat(1, num_attributes)
+        # stock2concept_matrix = concept_matrix * marketValue_matrix  # c in [4], market capitalization
+        # stock2concept_sum = torch.sum(stock2concept_matrix, 0).reshape(1, -1).repeat(num_stocks, 1)
+        # stock2concept_sum = concept_matrix * stock2concept_sum  # same as M1.mul(M2)
+        # stock2concept_sum += torch.ones(num_stocks, num_attributes)  # make sum legal to be denominate
+        # # weight from stock (alpha0)
+        # stock2concept_origin = stock2concept_matrix / stock2concept_sum  # alpha0 in [4], representing the weight of size 10 * 4635
+        # # initial representation (e0),
+        # initial_rep = torch.t(stock2concept_origin).mm(x0)  # [5]
+        # initial_rep = initial_rep[initial_rep.sum(1) != 0]  # [5] keep only relative concepts for saving computation
+        # # weight from stock (alpha1)
+        # cosSimilarity_initial = global_func.cal_cos_similarity(x0, initial_rep)  # [6] similarity
+        # stock2concept_update = self.softmax_s2t(cosSimilarity_initial)  # [6] softmax normalization
+        # # update representation (e1)
+        # update_rep = self.fc_ps(torch.t(stock2concept_update).mm(x0))  # [7]
+        # # weight from concept (beta)
+        # cosSimilarity_update = global_func.cal_cos_similarity(x0, update_rep)  # [10] similarity
+        # concept2stock = self.softmax_t2s(cosSimilarity_update)  # [10] softmax normalization
+        # # shared information (s0)
+        # sharedInfo = self.fc_ps(concept2stock.mm(update_rep))   # [11]
+        # # outputs
+        # sharedInfo_back = self.leaky_relu(self.fc_ps_back(sharedInfo))  # [12] x0_hat
+        # sharedInfo_fore = self.leaky_relu(self.fc_ps_fore(sharedInfo))  # [12] y0
+        # output_ps = self.fc_out_ps(sharedInfo_fore).squeeze()
+
+        # # assign to class
+        # self.p_sharedInfo_back = sharedInfo_back
+        # self.p_sharedInfo_fore = sharedInfo_fore
+
+         # Implementation in TGC
+        (num_stocks, num_relations) = concept_matrix.shape[1:3] # concept_matrix as relation_matrix(N,N,K)
+        (num_stocks, hidden_size) = x0.shape
+        sharedInfo = np.zeros((num_stocks, hidden_size))
+        for i in range(num_stocks):
+            for j in range(num_stocks):
+                dj = 0
+                if j == i or torch.sum(concept_matrix[i,j,:]==0): 
+                    continue
+                else:
+                    dj += 1  # num of j satisfy
+                    similarity = torch.t(x0[i]).mm(x0[j])
+                    relation_importance = self.fc_ps(concept_matrix[i,j,:])
+                    relation_strength = similarity + relation_importance   #Explicit Modeling
+                    sharedInfo[i, :] += relation_strength * x0[j] / dj
+        
+        
         # shared information (s0)
-        sharedInfo = self.fc_ps(concept2stock.mm(update_rep))   # [11]
+        # sharedInfo = self.fc_ps(concept2stock.mm(update_rep))   # [11]
+
         # outputs
+        sharedInfo = torch.from_numpy(sharedInfo).float()
         sharedInfo_back = self.leaky_relu(self.fc_ps_back(sharedInfo))  # [12] x0_hat
         sharedInfo_fore = self.leaky_relu(self.fc_ps_fore(sharedInfo))  # [12] y0
         output_ps = self.fc_out_ps(sharedInfo_fore).squeeze()
@@ -257,6 +287,7 @@ class OptHIST(nn.Module):
         # assign to class
         self.p_sharedInfo_back = sharedInfo_back
         self.p_sharedInfo_fore = sharedInfo_fore
+        # return sharedInfo_back, output_ps
 
         """
         Calculates only ONE day's hidden result
