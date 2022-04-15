@@ -10,4 +10,5 @@ model_org.py: The copy of original HIST model, for details, please refer to http
 
 # Versions
 03/16: Version 1.0: implemented the model structure, received the same output format
+
 04/14: Version 2.0: updated model.py to the format of super class nn.Module in order to do further training and testing. Rearranged the concepts functions. Implemented and tunned the training/test epoch processes, the program can run smoothly
