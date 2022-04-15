@@ -1,8 +1,12 @@
 """
 Authors: Zeqian Cai, Yurui Chang, Jinhuan Ke, Yichen Li, Suyuan Wang
-Date: 2022/03/05
-Version: V 1.0
+Date: 2022/04/14
+Version: V 2.0
 Function: To build the model class
+Modification:
+    V1.0: Implement basic logic of three concepts in model
+    V2.0: Rearrange to follow format of super class;
+        Implement TGC algorithm
 """
 
 import copy
