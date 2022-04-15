@@ -19,7 +19,7 @@ import torch.nn.init as init
 import global_func
 
 
-class OptHIST():
+class OptHIST(nn.Module):
     # further declaration
     x0: torch.tensor
     p_sharedInfo_back: torch.tensor
@@ -139,6 +139,38 @@ class OptHIST():
         self.p_sharedInfo_fore = sharedInfo_fore
         return sharedInfo_back, output_ps
 
+    def predefined_concept_novelty(self, x0, concept_matrix: torch.tensor):
+        # Implementation in TGC
+        (num_stocks, num_relations) = concept_matrix.shape[1:3] # concept_matrix as relation_matrix(N,N,K)
+        (num_stocks, hidden_size) = x0.shape
+        sharedInfo = np.zeros((num_stocks, hidden_size))
+        for i in range(num_stocks):
+            for j in range(num_stocks):
+                dj = 0
+                if j == i or torch.sum(concept_matrix[i,j,:]==0): 
+                    continue
+                else:
+                    dj += 1  # num of j satisfy
+                    similarity = torch.t(x0[i]).mm(x0[j])
+                    relation_importance = self.fc_ps(concept_matrix[i,j,:])
+                    relation_strength = similarity + relation_importance   #Explicit Modeling
+                    sharedInfo[i, :] += relation_strength * x0[j] / dj
+        
+        
+        # shared information (s0)
+        # sharedInfo = self.fc_ps(concept2stock.mm(update_rep))   # [11]
+
+        # outputs
+        sharedInfo = torch.from_numpy(sharedInfo).float()
+        sharedInfo_back = self.leaky_relu(self.fc_ps_back(sharedInfo))  # [12] x0_hat
+        sharedInfo_fore = self.leaky_relu(self.fc_ps_fore(sharedInfo))  # [12] y0
+        output_ps = self.fc_out_ps(sharedInfo_fore).squeeze()
+
+        # assign to class
+        self.p_sharedInfo_back = sharedInfo_back
+        self.p_sharedInfo_fore = sharedInfo_fore
+        return sharedInfo_back, output_ps
+
     def hidden_concept(self, x1):
         """
         Calculates only ONE day's hidden result
@@ -200,3 +232,21 @@ class OptHIST():
         # assign to class
         self.pred = pred_all
         return pred_all
+
+    def forward(self,x,concept_matrix:torch.tensor,market_value:torch.tensor):
+        '''encode_feature'''
+        x0 = self.encode_feature(x)
+
+        '''predefined_concept'''
+        self.predefined_concept_novelty(x0,concept_matrix)
+
+        '''hidden_concept'''
+        x1 = x0 - self.p_sharedInfo_back
+        self.hidden_concept(x1)
+
+        '''individual_concept'''
+        x2 = x1 - self.h_sharedInfo_back
+        self.individual_concept(x2)
+
+        '''predict'''
+        return self.predict()
