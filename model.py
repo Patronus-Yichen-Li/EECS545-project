@@ -90,7 +90,9 @@ class OptHIST(nn.Module):
         :return: GRU-extracted feature X0
         """
         encoded_feature = x.reshape(len(x), self.input_size, -1)  # [N, F, T]
+        # print(encoded_feature.size())
         encoded_feature = encoded_feature.permute(0, 2, 1)  # [N, T, F]
+        # print(encoded_feature.size())
         encoded_feature, _ = self.encoder(encoded_feature)
 
         # assign to class
@@ -143,10 +145,13 @@ class OptHIST(nn.Module):
         # Implementation in TGC
         (num_stocks, num_relations) = concept_matrix.shape[1:3] # concept_matrix as relation_matrix(N,N,K)
         (num_stocks, hidden_size) = x0.shape
+        # print("x0:", x0.shape)
+        # print(concept_matrix.size())
         sharedInfo = np.zeros((num_stocks, hidden_size))
         for i in range(num_stocks):
             for j in range(num_stocks):
                 dj = 0
+                # print("predefined: ",i,j)
                 if j == i or torch.sum(concept_matrix[i,j,:]==0): 
                     continue
                 else:

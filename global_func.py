@@ -14,9 +14,11 @@ class DataLoader:
     def __init__(self):
         self.stock_index = np.load("./data/csi300_stock_index.npy", allow_pickle=True).item()
         self.stock2concept = np.load("./data/relation.npy", allow_pickle=True)
-        self.stock_price = pd.read_csv("./data/new_feature.csv")
-        self.market_value = pd.read_csv("./data/new_marketVal.csv")
-        self.parsing()
+        # self.stock_price = pd.read_csv("./data/new_feature.csv")
+        # self.market_value = pd.read_csv("./data/new_marketVal.csv")
+        self.stock_price = pd.read_csv("./data/comine_all_data.csv")
+        self.market_value = pd.read_csv("./data/comine_all_label.csv")
+        # self.parsing()
 
     # for test only
     def parsing(self):

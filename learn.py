@@ -80,12 +80,12 @@ def train_epoch(epoch, model, optimizer, train_loader, stock2concept_matrix = No
     model.train()
 
     batch_size = 10
-    num_companies = 10
+    num_companies = 308
     dates = 1000
     """关于时间的循环应该加在哪里？"""
     for i in range(batch_size):
         global_step += 1
-        r = random.randrange(int(num_companies/2-1),int(num_companies/2+1))
+        r = random.randrange(int(num_companies/2-5),int(num_companies/2+5))
         stock_index = torch.from_numpy(np.array(random.sample(range(num_companies), r))).long()
         # print(stock_index)
         # x0_t = model.encode_feature(data_matrix_train[t])   # # hidden_size attributes remained (360 > 64)
@@ -100,12 +100,11 @@ def train_epoch(epoch, model, optimizer, train_loader, stock2concept_matrix = No
         feature = train_loader[idx.long()]
 
         # pred = model(feature, stock2concept_matrix[stock_index], marketValue[idx.long()])
+        # print(stock2concept_matrix.size())
         pred = model(feature, stock2concept_matrix, marketValue[idx.long()])
         repeat_date_companies_label = torch.ones(r)*(random_date+1)*num_companies
         idx_label = stock_index + repeat_date_companies_label
         label = marketValue[idx_label.long()].squeeze()
-        # print(pred.size())
-        # print(label.size())
         loss = loss_fn(pred, label)
 
         optimizer.zero_grad()
@@ -132,14 +131,17 @@ def test_epoch(epoch, model, test_loader, stock2concept_matrix=None, marketValue
         dates_start = 0
         dates_end = 1000
         # batch_size = 10
-    num_companies = 10
+    num_companies = 308
+    print(prefix)
 
     # for i, slc in tqdm(test_loader.iter_daily(), desc=prefix, total=test_loader.daily_length):
-    for i in range(dates_start, dates_end):
-        # print(i)
+    # for i in range(dates_start, dates_end):
+    for i in range(100):
+        print("test_epoch: ", i)
         r = num_companies
         stock_index = torch.arange(0, r).long()
-        random_date = i
+        # random_date = i
+        random_date = random.randrange(dates_start,dates_end)
         repeat_date_companies = torch.ones(r)*random_date*num_companies
         idx = stock_index+repeat_date_companies
 
@@ -151,7 +153,8 @@ def test_epoch(epoch, model, test_loader, stock2concept_matrix=None, marketValue
         idx_label = stock_index + repeat_date_companies_label
         label = marketValue[idx_label.long()].squeeze()
 
-        arrays = [(torch.ones(r)*(random_date+1)), stock_index.numpy()]
+        arrays = [(np.ones(r)*(random_date+1)), stock_index.numpy()]
+        # print(arrays)
         index = pd.MultiIndex.from_arrays(arrays, names=('datetime', 'stock'))
         # print(index)
 
@@ -166,8 +169,6 @@ def test_epoch(epoch, model, test_loader, stock2concept_matrix=None, marketValue
     preds = pd.concat(preds, axis=0)
     precision, recall, ic, rank_ic = metric_fn(preds)
     scores = ic
-    # scores = (precision[3] + precision[5] + precision[10] + precision[30])/4.0
-    # scores = -1.0 * mse
 
     # writer.add_scalar(prefix+'/Loss', np.mean(losses), epoch)
     # writer.add_scalar(prefix+'/std(Loss)', np.std(losses), epoch)
@@ -193,14 +194,17 @@ def inference(model, data_loader, stock2concept_matrix=None, prefix='test'):
         dates_start = 0
         dates_end = 1000
         # batch_size = 10
-    num_companies = 10
+    num_companies = 308
+    print(prefix)
 
     # for i, slc in tqdm(test_loader.iter_daily(), desc=prefix, total=test_loader.daily_length):
-    for i in range(dates_start, dates_end):
-        # print(i)
+    # for i in range(dates_start, dates_end):
+    for i in range(50):
+        print("inference: ", i)
         r = num_companies
         stock_index = torch.arange(0, r).long()
-        random_date = i
+        # random_date = i
+        random_date = random.randrange(dates_start,dates_end)
         repeat_date_companies = torch.ones(r)*random_date*num_companies
         idx = stock_index+repeat_date_companies
 
@@ -212,7 +216,7 @@ def inference(model, data_loader, stock2concept_matrix=None, prefix='test'):
         idx_label = stock_index + repeat_date_companies_label
         label = marketValue[idx_label.long()].squeeze()
 
-        arrays = [(torch.ones(r)*(random_date+1)), stock_index.numpy()]
+        arrays = [(np.ones(r)*(random_date+1)), stock_index.numpy()]
         index = pd.MultiIndex.from_arrays(arrays, names=('datetime', 'stock'))
         # print(index)
 
@@ -240,7 +244,7 @@ if __name__ == "__main__":
     dates = 1000
     valid_dates = 500
     test_dates = 500
-    num_companies = 10
+    num_companies = 308
     size_train = dates * num_companies
     end_valid = (dates+valid_dates) * num_companies
     end_test = (dates+valid_dates+test_dates) * num_companies
@@ -249,6 +253,7 @@ if __name__ == "__main__":
     np.random.seed(seed)
     torch.manual_seed(seed)
     data_matrix_train = data_matrix[0:size_train]   # generate training data set
+    # print(data_matrix_train.size())
     data_matrix_valid = data_matrix[0:end_valid]
     data_matrix_test = data_matrix[0:end_test]
     # print(data_matrix_train.size())
@@ -257,7 +262,8 @@ if __name__ == "__main__":
     model = OptHIST()
     # model_org = HIST()
     # data matrix modification
-    data_matrix_train = data_matrix_train.reshape(size_train, num_companies, -1)
+    # data_matrix_train = data_matrix_train.reshape(dates, num_companies, -1)
+    # print(data_matrix_train.size())
 
     """ training """
     # for t in range(5):
