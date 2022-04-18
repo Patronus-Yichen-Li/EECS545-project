@@ -105,6 +105,8 @@ def train_epoch(epoch, model, optimizer, train_loader, stock2concept_matrix = No
         repeat_date_companies_label = torch.ones(r)*(random_date+1)*num_companies
         idx_label = stock_index + repeat_date_companies_label
         label = marketValue[idx_label.long()].squeeze()
+        trend = np.insert(np.diff(label), 0, 0, axis=0)
+        label = trend / label
         loss = loss_fn(pred, label)
 
         optimizer.zero_grad()

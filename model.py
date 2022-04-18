@@ -238,7 +238,7 @@ class OptHIST(nn.Module):
         self.pred = pred_all
         return pred_all
 
-    def forward(self,x,concept_matrix:torch.tensor,market_value:torch.tensor):
+    def forward(self, x, concept_matrix:torch.tensor,market_value:torch.tensor):
         '''encode_feature'''
         x0 = self.encode_feature(x)
 
