@@ -278,8 +278,8 @@ if __name__ == "__main__":
     #     print(pred_all)
     #     # print(pred_all_org)
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # device = torch.device("cpu")
+    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cpu")
     print(device)
 
     all_precision = []
@@ -373,7 +373,7 @@ if __name__ == "__main__":
     # writer.writerow(all_rank_ic.insert(0,"all_rank_ic"))
     # writer.writerow(["all_precision",all_precision])
 
-    import os
+    # import os
     os.makedirs('output', exist_ok=True)
     df1 = pd.DataFrame(np.array(all_ic).T, columns=["all_ic"])
     df1.to_csv('./output/result_'+global_func.model+'_all_ic.csv')
