@@ -33,8 +33,8 @@ Adamlr=0.002
 smooth_steps = 5
 early_stop = 30
 
-model = "OptHIST"
-# model = "HIST"
+# model = "OptHIST"
+model = "HIST"
 
 class DataLoader:
     def __init__(self):

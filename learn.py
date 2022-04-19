@@ -280,8 +280,8 @@ if __name__ == "__main__":
     #     print(pred_all)
     #     # print(pred_all_org)
 
-    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    device = torch.device("cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cpu")
     print(device)
 
     all_precision = []

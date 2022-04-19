@@ -116,7 +116,7 @@ class OptHIST(nn.Module):
         stock2concept_matrix = concept_matrix * marketValue_matrix  # c in [4], market capitalization
         stock2concept_sum = torch.sum(stock2concept_matrix, 0).reshape(1, -1).repeat(num_stocks, 1)
         stock2concept_sum = concept_matrix * stock2concept_sum  # same as M1.mul(M2)
-        stock2concept_sum += torch.ones(num_stocks, num_attributes)  # make sum legal to be denominate
+        stock2concept_sum += torch.ones(num_stocks, num_attributes).to(self.device)  # make sum legal to be denominate
         # weight from stock (alpha0)
         stock2concept_origin = stock2concept_matrix / stock2concept_sum  # alpha0 in [4], representing the weight of size 10 * 4635
         # initial representation (e0),
@@ -166,7 +166,7 @@ class OptHIST(nn.Module):
         # sharedInfo = self.fc_ps(concept2stock.mm(update_rep))   # [11]
 
         # outputs
-        sharedInfo = torch.from_numpy(sharedInfo).float().to(self.device)
+        sharedInfo = torch.from_numpy(sharedInfo).float()
         sharedInfo_back = self.leaky_relu(self.fc_ps_back(sharedInfo))  # [12] x0_hat
         sharedInfo_fore = self.leaky_relu(self.fc_ps_fore(sharedInfo))  # [12] y0
         output_ps = self.fc_out_ps(sharedInfo_fore).squeeze()
