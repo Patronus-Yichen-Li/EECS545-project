@@ -152,7 +152,6 @@ def test_epoch(device, model, test_loader, stock2concept_matrix=None, closePrice
         close_price = closePrice[idx_label.long()].squeeze()
         prev_close_price = test_loader[idx.long(),59]
         label = (close_price-prev_close_price) / prev_close_price
-        label = label
         # trend = np.insert(np.diff(close_price), 0, 0, axis=0)
         # label = trend / close_price
 
@@ -210,7 +209,6 @@ def inference(device, model, data_loader, stock2concept_matrix=None, closePrice 
         close_price = closePrice[idx_label.long()].squeeze()
         prev_close_price = data_loader[idx.long(),59]
         label = (close_price-prev_close_price) / prev_close_price
-        label = label.to(device)
 
         # trend = np.insert(np.diff(close_price), 0, 0, axis=0)
         # label = trend / close_price

@@ -166,7 +166,7 @@ class OptHIST(nn.Module):
         # sharedInfo = self.fc_ps(concept2stock.mm(update_rep))   # [11]
 
         # outputs
-        sharedInfo = torch.from_numpy(sharedInfo).float()
+        sharedInfo = torch.from_numpy(sharedInfo).float().to(self.device)
         sharedInfo_back = self.leaky_relu(self.fc_ps_back(sharedInfo))  # [12] x0_hat
         sharedInfo_fore = self.leaky_relu(self.fc_ps_fore(sharedInfo))  # [12] y0
         output_ps = self.fc_out_ps(sharedInfo_fore).squeeze()
