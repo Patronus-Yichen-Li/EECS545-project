@@ -15,9 +15,11 @@ for i in range(rankic.shape[0]):
 
 # plt.ion()
 plt.figure(1)
+plt.rcParams.update({'font.size': 18})
 plt.plot(range(ic.shape[0]),icdata,'o-',label="IC")
 plt.plot(range(rankic.shape[0]),rankicdata,'o-',label="Rank IC")
 plt.title('Score IC for HIST Model')
+plt.xlabel('Times')
 plt.legend()
 # plt.show()
 
@@ -32,5 +34,6 @@ for j,c in enumerate(col):
     plt.plot(range(precision.shape[0]),precisiondata[j],'o-',label="precision_"+c)
 
 plt.title('Score Precision for HIST Model')
+plt.xlabel('Times')
 plt.legend()
 plt.show()
