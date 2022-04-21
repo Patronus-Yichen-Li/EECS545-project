@@ -1,4 +1,5 @@
 <div align='center' ><font size='70'># EECS545-project</font></div>
+
 # Stock Price Prediction based on Concept-Oriented Shared Information
 ### Author: Zeqian Cai, Yurui Chang, Jinhuan Ke, Yichen Li, Suyuan Wang
 
