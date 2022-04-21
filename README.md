@@ -1,7 +1,7 @@
 # EECS545-project
 
 # Stock Price Prediction based on Concept-Oriented Shared Information
-### Author: Zeqian Cai(czq@umich.edu), Yurui Chang(yuruic@umich.edu), Jinhuan Ke(jhgoblue@umich.edu), Yichen Li(liyichen.umich.edu), Suyuan Wang(wasuyuan.umich.edu)
+### Author: Zeqian Cai(czq@umich.edu), Yurui Chang(yuruic@umich.edu), Jinhuan Ke(jhgoblue@umich.edu), Yichen Li(liyichen@umich.edu), Suyuan Wang(wasuyuan@umich.edu)
 
 ## Introduction
 Stock trend forecasting plays an essential role in investment, many methods such as tree methods and neural networks has been used for analysis. 
