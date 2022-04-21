@@ -1,7 +1,7 @@
-<div align='center' ><font size='1000'>EECS545-project</font></div>
+# EECS545-project
 
 # Stock Price Prediction based on Concept-Oriented Shared Information
-### Author: Zeqian Cai, Yurui Chang, Jinhuan Ke, Yichen Li, Suyuan Wang
+### Author: Zeqian Cai(czq@umich.edu), Yurui Chang(yuruic@umich.edu), Jinhuan Ke(jhgoblue@umich.edu), Yichen Li(liyichen.umich.edu), Suyuan Wang(wasuyuan.umich.edu)
 
 ## Introduction
 Stock trend forecasting plays an essential role in investment, many methods such as tree methods and neural networks has been used for analysis. 
@@ -17,9 +17,9 @@ One important feature of stocks is that some of them have shared information, th
 
 ## Data
 Since the raw data files are too large to be uploaded to Github, please refer to this link (Google Drive) to acquire data
-Google Drive: 
+Google Drive: https://drive.google.com/file/d/1cI2XH-OxVe9qG4ri46hKdPyqKoyrthvn/view?usp=sharing
 
-## Projecy introduction
+## Projecy introduction & Result Demostration
 We have concluded our methods and novelties into a single poster, please refer to this link for reading or downloading 
 Google Drive: https://drive.google.com/file/d/1hvWgrEZmiiulEB87ACTnc-_egBz8U1nW/view?usp=sharing
 
