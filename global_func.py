@@ -9,14 +9,42 @@ import numpy as np
 import pandas as pd
 import torch
 
+repeat = 10
+epoch = 200
+num_companies = 308
+
+train_batch_size = 200
+test_batch_size = 200
+inference_batch_size = 100
+
+train_start_date = 0
+train_end_date = 1500
+valid_start_date = 1501
+valid_end_date = 2000
+test_start_date = 2001
+test_end_date = 3000
+
+min_num = 90
+max_num = 100
+
+num_layers=2
+K=1
+Adamlr=0.002
+smooth_steps = 5
+early_stop = 30
+
+model = "OptHIST"
+# model = "HIST"
 
 class DataLoader:
     def __init__(self):
-        # self.stock_index = np.load("./data/csi300_stock_index.npy", allow_pickle=True).item()
-        self.stock2concept = np.load("./data/relation.npy", allow_pickle=True)
-        self.stock_price = pd.read_csv("./data/new_feature.csv")
-        self.market_value = pd.read_csv("./data/new_marketVal.csv")
-        self.parsing()
+        if model == "OptHIST":
+            self.stock2concept = np.load("./data/relation.npy", allow_pickle=True)
+        else:
+            self.stock2concept = np.load("./data/concept.npy", allow_pickle=True)
+        self.stock_price = pd.read_csv("./data/new_feature_all.csv")
+        self.market_value = pd.read_csv("./data/new_marketVal_all.csv")
+        # self.parsing()
 
     # for test only
     def parsing(self):

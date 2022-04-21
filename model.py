@@ -1,12 +1,8 @@
 """
 Authors: Zeqian Cai, Yurui Chang, Jinhuan Ke, Yichen Li, Suyuan Wang
-Date: 2022/04/14
-Version: V 2.0
+Date: 2022/03/05
+Version: V 1.0
 Function: To build the model class
-Modification:
-    V1.0: Implement basic logic of three concepts in model
-    V2.0: Rearrange to follow format of super class;
-        Implement TGC algorithm
 """
 
 import copy
@@ -33,7 +29,7 @@ class OptHIST(nn.Module):
     individualInfo: torch.tensor
     pred: torch.tensor
 
-    def __init__(self, input_size=6, hidden_size=64, num_layers=2, dropout=0.0, K=3):
+    def __init__(self, input_size=6, hidden_size=128, num_layers=2, dropout=0.0, K=3,device="cpu"):
         """
         :param input_size: # of attributes
         :param hidden_size: # of features encoded after GRU
@@ -52,6 +48,7 @@ class OptHIST(nn.Module):
         self.num_layers = num_layers
         self.dropout = 0.0
         self.K = K
+        self.device = device
 
         # feature encoder
         self.encoder = nn.GRU(
@@ -94,7 +91,9 @@ class OptHIST(nn.Module):
         :return: GRU-extracted feature X0
         """
         encoded_feature = x.reshape(len(x), self.input_size, -1)  # [N, F, T]
+        # print(encoded_feature.size())
         encoded_feature = encoded_feature.permute(0, 2, 1)  # [N, T, F]
+        # print(encoded_feature.size())
         encoded_feature, _ = self.encoder(encoded_feature)
 
         # assign to class
@@ -110,14 +109,14 @@ class OptHIST(nn.Module):
         :return: forecast output output_ps, backcast output sharedInfo_back
         """
         # variables definition
-        device = torch.device("cpu")  # probably for potential GPU choice
+        # device = torch.device("cpu")  # probably for potential GPU choice
         (num_stocks, num_attributes) = concept_matrix.shape
         # build the weight from each stock to the predefined concept
         marketValue_matrix = market_value.reshape(num_stocks, 1).repeat(1, num_attributes)
         stock2concept_matrix = concept_matrix * marketValue_matrix  # c in [4], market capitalization
         stock2concept_sum = torch.sum(stock2concept_matrix, 0).reshape(1, -1).repeat(num_stocks, 1)
         stock2concept_sum = concept_matrix * stock2concept_sum  # same as M1.mul(M2)
-        stock2concept_sum += torch.ones(num_stocks, num_attributes)  # make sum legal to be denominate
+        stock2concept_sum += torch.ones(num_stocks, num_attributes).to(self.device)  # make sum legal to be denominate
         # weight from stock (alpha0)
         stock2concept_origin = stock2concept_matrix / stock2concept_sum  # alpha0 in [4], representing the weight of size 10 * 4635
         # initial representation (e0),
@@ -143,14 +142,16 @@ class OptHIST(nn.Module):
         self.p_sharedInfo_fore = sharedInfo_fore
         return sharedInfo_back, output_ps
 
-    def predefined_concept_novelty(self, x0, concept_matrix: torch.tensor):
-        # Implementation in TGC
-        (num_stocks, num_relations) = concept_matrix.shape[1:3] # concept_matrix as relation_matrix(N,N,K)
+    def predefined_concept_novelty(self, x0, concept_matrix: torch.tensor,stock_index: torch.tensor):
+        (num_stocks, num_relations) = concept_matrix.shape[1:3] # concept_matrix as relation_matrix(N_select,N,K)
         (num_stocks, hidden_size) = x0.shape
-        sharedInfo = np.zeros((num_stocks, hidden_size))
-        for i in range(num_stocks):
+        num_stocks_select = stock_index.shape[0]
+
+        sharedInfo = np.zeros((num_stocks_select, hidden_size))
+        for i in stock_index:
             for j in range(num_stocks):
                 dj = 0
+                # print("predefined: ",i,j)
                 if j == i or torch.sum(concept_matrix[i,j,:]==0): 
                     continue
                 else:
@@ -165,7 +166,7 @@ class OptHIST(nn.Module):
         # sharedInfo = self.fc_ps(concept2stock.mm(update_rep))   # [11]
 
         # outputs
-        sharedInfo = torch.from_numpy(sharedInfo).float()
+        sharedInfo = torch.from_numpy(sharedInfo).float().to(self.device)
         sharedInfo_back = self.leaky_relu(self.fc_ps_back(sharedInfo))  # [12] x0_hat
         sharedInfo_fore = self.leaky_relu(self.fc_ps_fore(sharedInfo))  # [12] y0
         output_ps = self.fc_out_ps(sharedInfo_fore).squeeze()
@@ -182,13 +183,13 @@ class OptHIST(nn.Module):
         :return: forecast output output_ps, backcast output sharedInfo_back
         """
         # variables definition
-        device = torch.device("cpu")  # probably for potential GPU choice
+        # device = torch.device("cpu")  # probably for potential GPU choice
         stock2concept = global_func.cal_cos_similarity(x1, x1)  ### ???????????????
         dim = stock2concept.shape[0]
         diag = stock2concept.diagonal(0)
-        stock2concept = stock2concept * (torch.ones(dim, dim) - torch.eye(dim)).to(device)
+        stock2concept = stock2concept * (torch.ones(dim, dim) - torch.eye(dim)).to(self.device)
         # for each row and column
-        row = torch.linspace(0, dim - 1, dim).reshape([-1, 1]).repeat(1, self.K).reshape(1, -1).long().to(device)
+        row = torch.linspace(0, dim - 1, dim).reshape([-1, 1]).repeat(1, self.K).reshape(1, -1).long().to(self.device)
         col = torch.topk(stock2concept, self.K, dim=1)[1].reshape(1, -1)
         mask = torch.zeros([stock2concept.shape[0], stock2concept.shape[1]], device=stock2concept.device)
         mask[row, col] = 1
@@ -201,7 +202,7 @@ class OptHIST(nn.Module):
         cosSimilarity = global_func.cal_cos_similarity(x1, hiddenConcept)  # [10] similarity
         concept2stock = self.softmax_t2s(cosSimilarity)  # [10] softmax normalization
         # shared information (s1)
-        sharedInfo = self.fc_ps(concept2stock.mm(hiddenConcept))
+        sharedInfo = self.fc_ps(concept2stock.mm(hiddenConcept)).to(self.device)
         # outputs
         sharedInfo_back = self.leaky_relu(self.fc_hs_back(sharedInfo))  # [12] x1_hat
         sharedInfo_fore = self.leaky_relu(self.fc_ps_fore(sharedInfo))  # [12] y1
@@ -237,13 +238,16 @@ class OptHIST(nn.Module):
         self.pred = pred_all
         return pred_all
 
-    def forward(self,x,concept_matrix:torch.tensor,market_value:torch.tensor):
+    def forward(self,x,concept_matrix:torch.tensor,stock_index: torch.tensor,market_value:torch.tensor):
         '''encode_feature'''
         x0 = self.encode_feature(x)
 
         '''predefined_concept'''
-        self.predefined_concept_novelty(x0,concept_matrix)
-
+        if global_func.model == "OptHIST":
+            self.predefined_concept_novelty(x0,concept_matrix,stock_index)
+        else:
+            self.predefined_concept(x0, concept_matrix, market_value)
+        
         '''hidden_concept'''
         x1 = x0 - self.p_sharedInfo_back
         self.hidden_concept(x1)
