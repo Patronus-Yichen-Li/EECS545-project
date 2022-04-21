@@ -26,7 +26,7 @@ Since the raw data files are too large to be uploaded to Github, please refer to
 
 Google Drive: https://drive.google.com/file/d/1cI2XH-OxVe9qG4ri46hKdPyqKoyrthvn/view?usp=sharing
 
-## Projecy introduction & Result Demostration
+## Project introduction & Result Demostration
 We have concluded our methods and novelties into a single poster, please refer to this link for reading or downloading 
 
 Google Drive: https://drive.google.com/file/d/1hvWgrEZmiiulEB87ACTnc-_egBz8U1nW/view?usp=sharing
