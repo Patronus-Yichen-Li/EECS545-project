@@ -6,23 +6,16 @@ Function: To build the model class
 """
 
 import copy
-import json
 import collections
-import argparse  # for Linux implementation
 import numpy as np
 import pandas as pd
-# from tqdm import tqdm
 import random
-from zmq import device
 # pytorch
 import torch
-import torch.nn as nn
-import torch.nn.init as init
 import torch.optim as optim
 # self edit files
 import global_func
 from model import OptHIST
-from model_org import HIST
 from global_func import DataLoader
 
 import os
@@ -103,10 +96,6 @@ def train_epoch(device, model, optimizer, train_loader, stock2concept_matrix = N
         close_price = closePrice[idx_label.long()].squeeze()
         prev_close_price = train_loader[idx.long(),59]
         label = (close_price-prev_close_price) / prev_close_price
-        # print(label.size())
-        # trend = np.insert(np.diff(close_price), 0, 0, axis=0)
-        # label = trend / close_price 
-        # print(label)
         
         loss = loss_fn(pred, label.to(device))
 
@@ -134,13 +123,11 @@ def test_epoch(device, model, test_loader, stock2concept_matrix=None, closePrice
     num_companies = global_func.num_companies
     print(prefix+"_test_epoch_function")
 
-    # for i in range(dates_start, dates_end):
     for i in range(global_func.test_batch_size):
         # r = num_companies
         # stock_index = torch.arange(0, r).long()
         r = random.randrange(global_func.min_num,global_func.max_num)
         stock_index = torch.from_numpy(np.array(random.sample(range(num_companies), r))).long()
-        # random_date = i
         random_date = random.randrange(dates_start,dates_end)
         repeat_date_companies = torch.ones(r)*random_date*num_companies
         idx = stock_index+repeat_date_companies
@@ -152,8 +139,6 @@ def test_epoch(device, model, test_loader, stock2concept_matrix=None, closePrice
         close_price = closePrice[idx_label.long()].squeeze()
         prev_close_price = test_loader[idx.long(),59]
         label = (close_price-prev_close_price) / prev_close_price
-        # trend = np.insert(np.diff(close_price), 0, 0, axis=0)
-        # label = trend / close_price
 
         arrays = [(np.ones(r)*(random_date+1)), stock_index.numpy()]
         index = pd.MultiIndex.from_arrays(arrays, names=('datetime', 'stock'))
@@ -191,11 +176,9 @@ def inference(device, model, data_loader, stock2concept_matrix=None, closePrice 
     num_companies = global_func.num_companies
     print(prefix+"_inference_function")
 
-    # for i in range(dates_start, dates_end):
     for i in range(global_func.inference_batch_size):
         # r = num_companies
         # stock_index = torch.arange(0, r).long()
-        # random_date = i
         r = random.randrange(global_func.min_num,global_func.max_num)
         stock_index = torch.from_numpy(np.array(random.sample(range(num_companies), r))).long()
         random_date = random.randrange(dates_start,dates_end)
@@ -209,9 +192,6 @@ def inference(device, model, data_loader, stock2concept_matrix=None, closePrice 
         close_price = closePrice[idx_label.long()].squeeze()
         prev_close_price = data_loader[idx.long(),59]
         label = (close_price-prev_close_price) / prev_close_price
-
-        # trend = np.insert(np.diff(close_price), 0, 0, axis=0)
-        # label = trend / close_price
 
         arrays = [(np.ones(r)*(random_date+1)), stock_index.numpy()]
         index = pd.MultiIndex.from_arrays(arrays, names=('datetime', 'stock'))
@@ -238,10 +218,6 @@ if __name__ == "__main__":
     stock2concept = torch.from_numpy(dataset.stock2concept).float()
 
     # parameters
-    # (num_stocks, num_attributes) = dataset.stock2concept.shape
-    # dates = global_func.train_end_date
-    # valid_dates = 500   # end - end
-    # test_dates = 500
     num_companies = global_func.num_companies
     end_train = global_func.train_end_date * num_companies
     end_valid = global_func.valid_end_date * num_companies
@@ -254,32 +230,8 @@ if __name__ == "__main__":
     data_matrix_valid = data_matrix[0:end_valid]
     data_matrix_test = data_matrix[0:end_test]
 
-    # initialize model
-    # model = OptHIST()
-    # model_org = HIST()
-
-    """ training """
-    # for t in range(5):
-    #     # encode feature
-    #     x0_t = model.encode_feature(data_matrix_train[t])   # # hidden_size attributes remained (360 > 64)
-    #     marketValue_t = marketValue[t * num_companies: (t + 1) * num_companies]
-    #     # predefined module
-    #     p_sharedInfo_back_t, p_sharedIno_fore_t = model.predefined_concept(x0_t, stock2concept, marketValue_t)
-    #     # hidden module
-    #     x1_t = x0_t - p_sharedInfo_back_t
-    #     h_sharedInfo_back_t, h_sharedIno_fore_t = model.hidden_concept(x1_t)
-    #     # individual module
-    #     x2_t = x1_t - h_sharedInfo_back_t
-    #     model.individual_concept(x2_t)
-    #     # predict all
-    #     pred_all = model.predict()
-    #     # pred_all_org = model_org.forward(data_matrix_train[t], stock2concept, marketValue_t)
-    #     print("Day " + str(t) + ":")
-    #     print(pred_all)
-    #     # print(pred_all_org)
-
-    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    device = torch.device("cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cpu")
     print(device)
 
     all_precision = []
@@ -366,13 +318,6 @@ if __name__ == "__main__":
     for k in range(len(N)):
         print (('Precision@%d: %.4f (%.4f)')%(N[k], precision_mean[k], precision_std[k]))
 
-    # import csv
-    # filew = open('./data/result_'+global_func.model+'.csv', 'w', newline='')
-    # writer = csv.writer(filew)
-    # writer.writerow(all_ic.insert(0,"all_ic"))
-    # writer.writerow(all_rank_ic.insert(0,"all_rank_ic"))
-    # writer.writerow(["all_precision",all_precision])
-
     # import os
     os.makedirs('output', exist_ok=True)
     df1 = pd.DataFrame(np.array(all_ic).T, columns=["all_ic"])
@@ -381,8 +326,5 @@ if __name__ == "__main__":
     df2.to_csv('./output/result_'+global_func.model+'_all_rank_ic.csv')
     df3 = pd.DataFrame(np.array(all_precision), columns=["1","3","5","10","20","30","50","100"])
     df3.to_csv('./output/result_'+global_func.model+'_all_precision.csv')
-
-
-    
 
     print('finished.')

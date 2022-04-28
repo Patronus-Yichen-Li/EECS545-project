@@ -9,12 +9,12 @@ import numpy as np
 import pandas as pd
 import torch
 
-repeat = 10
+repeat = 3  #10
 epoch = 200
 num_companies = 308
 
-train_batch_size = 200
-test_batch_size = 200
+train_batch_size = 800  #200
+test_batch_size = 500   #200
 inference_batch_size = 100
 
 train_start_date = 0
@@ -28,13 +28,13 @@ min_num = 90
 max_num = 100
 
 num_layers=2
-K=1
+K=5
 Adamlr=0.002
 smooth_steps = 5
 early_stop = 30
 
-model = "OptHIST"
-# model = "HIST"
+# model = "OptHIST"
+model = "HIST"
 
 class DataLoader:
     def __init__(self):

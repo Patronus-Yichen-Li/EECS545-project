@@ -5,12 +5,7 @@ Version: V 1.0
 Function: To build the model class
 """
 
-import copy
-import json
-import collections
-import argparse  # for Linux implementation
 import numpy as np
-import pandas as pd
 # pytorch
 import torch
 import torch.nn as nn
@@ -151,7 +146,6 @@ class OptHIST(nn.Module):
         for i in stock_index:
             for j in range(num_stocks):
                 dj = 0
-                # print("predefined: ",i,j)
                 if j == i or torch.sum(concept_matrix[i,j,:]==0): 
                     continue
                 else:
@@ -183,7 +177,6 @@ class OptHIST(nn.Module):
         :return: forecast output output_ps, backcast output sharedInfo_back
         """
         # variables definition
-        # device = torch.device("cpu")  # probably for potential GPU choice
         stock2concept = global_func.cal_cos_similarity(x1, x1)  ### ???????????????
         dim = stock2concept.shape[0]
         diag = stock2concept.diagonal(0)
